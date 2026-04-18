@@ -91,5 +91,5 @@ struct CardAnswerResult: Equatable, Sendable {
 
 enum FeedbackState: Equatable {
     case success
-    case error(correctAnswer: String, explanation: String)
+    case error(userAnswer: String, correctAnswer: String, explanation: String)
 }

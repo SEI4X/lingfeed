@@ -13,11 +13,11 @@ enum FeedPhase: Equatable {
 final class FeedViewModel: ObservableObject {
     @Published private(set) var phase: FeedPhase = .idle
     @Published private(set) var cards: [LearningCard] = []
-    @Published private(set) var feedback: FeedbackState?
     @Published private(set) var stats = SessionStats()
     @Published private(set) var profile = UserProfile.empty
     @Published private(set) var currentCardID: LearningCard.ID?
     @Published var summary: SessionSummary?
+    @Published private var feedbackByCardID: [LearningCard.ID: FeedbackState] = [:]
 
     let languageCode: String
 
@@ -39,6 +39,11 @@ final class FeedViewModel: ObservableObject {
     var currentCard: LearningCard? {
         guard let currentCardID else { return cards.first }
         return cards.first { $0.id == currentCardID } ?? cards.first
+    }
+
+    var feedback: FeedbackState? {
+        guard let currentCardID else { return nil }
+        return feedbackByCardID[currentCardID]
     }
 
     var isBusy: Bool {
@@ -81,7 +86,7 @@ final class FeedViewModel: ObservableObject {
         committedCardID = nil
         cards = []
         currentCardID = nil
-        feedback = nil
+        feedbackByCardID = [:]
         stats = SessionStats()
         summary = nil
         completedCardIDs = []
@@ -111,9 +116,9 @@ final class FeedViewModel: ObservableObject {
             } else {
                 stats.registerAnswer(isCorrect: result.isCorrect)
             }
-            feedback = result.isCorrect
+            feedbackByCardID[card.id] = result.isCorrect
                 ? .success
-                : .error(correctAnswer: card.correctAnswer, explanation: card.explanation)
+                : .error(userAnswer: response, correctAnswer: card.correctAnswer, explanation: card.explanation)
             phase = .ready
 
             if result.isCorrect {
@@ -136,7 +141,7 @@ final class FeedViewModel: ObservableObject {
             if let nextCard {
                 appendIfNeeded(nextCard)
             }
-            feedback = nil
+            feedbackByCardID[card.id] = nil
             phase = .ready
             advanceToNextCard(after: card.id)
         } catch {
@@ -148,7 +153,7 @@ final class FeedViewModel: ObservableObject {
         guard let card = currentCard, phase != .answering else { return }
         tooEasyCardIDs.insert(card.id)
         completedCardIDs.insert(card.id)
-        feedback = nil
+        feedbackByCardID[card.id] = nil
         advanceToNextCard(after: card.id)
     }
 
@@ -164,7 +169,6 @@ final class FeedViewModel: ObservableObject {
     func activateCard(_ id: LearningCard.ID) {
         guard cards.contains(where: { $0.id == id }), currentCardID != id else { return }
         currentCardID = id
-        feedback = nil
     }
 
     func previewCard(_ id: LearningCard.ID) {
@@ -192,7 +196,6 @@ final class FeedViewModel: ObservableObject {
         guard let index = cards.firstIndex(where: { $0.id == cardID }) else { return }
         currentCardID = cards[safe: cards.index(after: index)]?.id ?? cards.first?.id
         committedCardID = currentCardID
-        feedback = nil
 
         if stats.answered > 0, stats.answered.isMultiple(of: summaryInterval), let sessionID {
             Task {

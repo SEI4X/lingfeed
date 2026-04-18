@@ -50,7 +50,15 @@ struct LearningCardView: View {
                     .font(AppTheme.bodyMonoFont)
                     .foregroundStyle(AppTheme.muted)
             }
+
             Spacer()
+
+            Image(systemName: iconName)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(iconColor)
+                .frame(width: 36, height: 36)
+                .background(iconColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
             Menu {
                 Button(action: onTooEasy) {
                     Label {
@@ -68,12 +76,6 @@ struct LearningCardView: View {
             }
             .disabled(isBusy)
             .accessibilityLabel(L10n.string("card.action.tooEasy"))
-
-            Image(systemName: iconName)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(iconColor)
-                .frame(width: 36, height: 36)
-                .background(iconColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 
@@ -212,7 +214,7 @@ private struct FeedbackPanel: View {
                 }
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(AppTheme.success)
-            case .error(let correctAnswer, let explanation):
+            case .error(let userAnswer, let correctAnswer, let explanation):
                 Label {
                     Text(verbatim: L10n.string("feedback.tryAgain"))
                 } icon: {
@@ -220,6 +222,7 @@ private struct FeedbackPanel: View {
                 }
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(AppTheme.danger)
+                answerCompareRow(titleKey: "feedback.yourAnswer", value: userAnswer, color: AppTheme.danger)
                 Text(verbatim: "\(L10n.string("feedback.correctAnswer")) \(correctAnswer)")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(AppTheme.ink)
@@ -236,5 +239,13 @@ private struct FeedbackPanel: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .appSurface(fill: AppTheme.recessed.opacity(0.72), border: AppTheme.hairline, radius: 18)
+    }
+
+    private func answerCompareRow(titleKey: String, value: String, color: Color) -> some View {
+        Text(verbatim: "\(L10n.string(titleKey)) \(value)")
+            .font(.body.weight(.semibold))
+            .foregroundStyle(color)
+            .lineLimit(3)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

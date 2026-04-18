@@ -32,6 +32,7 @@
 "card.action.tooEasy" = "Слишком просто";
 "feedback.success" = "Отлично. Следующая карточка уже идет.";
 "feedback.tryAgain" = "Почти.";
+"feedback.yourAnswer" = "Ваш ответ:";
 "feedback.correctAnswer" = "Правильный ответ:";
 "onboarding.title" = "Выберите язык";
 "onboarding.step" = "Язык";

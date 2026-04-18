@@ -37,6 +37,7 @@ final class L10nTests: XCTestCase {
             "card.action.tooEasy",
             "feedback.success",
             "feedback.tryAgain",
+            "feedback.yourAnswer",
             "feedback.correctAnswer",
             "onboarding.title",
             "onboarding.step",

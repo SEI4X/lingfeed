@@ -32,6 +32,7 @@
 "card.action.tooEasy" = "Too easy";
 "feedback.success" = "Nice. Next card is coming.";
 "feedback.tryAgain" = "Almost.";
+"feedback.yourAnswer" = "Your answer:";
 "feedback.correctAnswer" = "Correct answer:";
 "onboarding.title" = "Pick a language";
 "onboarding.step" = "Language";

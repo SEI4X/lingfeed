@@ -43,13 +43,48 @@ final class FeedViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.stats.answered, 1)
         XCTAssertEqual(viewModel.stats.correct, 0)
         XCTAssertEqual(viewModel.currentCard?.id, "card-1")
-        XCTAssertEqual(viewModel.feedback, .error(correctAnswer: "answer", explanation: "Because it matches."))
+        XCTAssertEqual(
+            viewModel.feedback,
+            .error(userAnswer: "wrong", correctAnswer: "answer", explanation: "Because it matches.")
+        )
 
         viewModel.continueAfterFeedback()
 
         XCTAssertNil(viewModel.feedback)
         XCTAssertEqual(viewModel.currentCard?.id, "card-2")
         XCTAssertTrue(viewModel.cards.contains { $0.id == "card-6" })
+    }
+
+    func testWrongAnswerFeedbackPersistsAfterPagingAwayAndBack() async {
+        let harness = FeedHarness(
+            answerResult: CardAnswerResult(isCorrect: false, nextCard: FeedHarness.card(id: "card-6"))
+        )
+        let viewModel = harness.makeViewModel()
+
+        await viewModel.start()
+        await viewModel.submit("wrong")
+        await viewModel.pageToCard("card-2")
+        await viewModel.pageToCard("card-1")
+
+        XCTAssertEqual(viewModel.currentCard?.id, "card-1")
+        XCTAssertEqual(
+            viewModel.feedback,
+            .error(userAnswer: "wrong", correctAnswer: "answer", explanation: "Because it matches.")
+        )
+    }
+
+    func testCorrectAnswerFeedbackPersistsAfterAutoAdvanceAndReturn() async {
+        let harness = FeedHarness(
+            answerResult: CardAnswerResult(isCorrect: true, nextCard: FeedHarness.card(id: "card-6"))
+        )
+        let viewModel = harness.makeViewModel()
+
+        await viewModel.start()
+        await viewModel.submit("answer")
+        await viewModel.pageToCard("card-1")
+
+        XCTAssertEqual(viewModel.currentCard?.id, "card-1")
+        XCTAssertEqual(viewModel.feedback, .success)
     }
 
     func testSkipAdvancesAndCountsSkippedCard() async {
