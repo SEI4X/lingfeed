@@ -10,18 +10,17 @@ struct CardInteractionView: View {
 
     var body: some View {
         Group {
-            switch card.type {
-            case .translate:
-                textEntry(actionTitleKey: "action.check")
-            case .multipleChoice, .fillGap, .chat:
+            switch card.interactionMode {
+            case .textEntry(let prefillsPrompt):
+                textEntry(actionTitleKey: card.type == .fixMistake ? "action.fix" : "action.check")
+                    .onAppear {
+                        guard prefillsPrompt else { return }
+                        textAnswer = cleanedFixPrompt
+                    }
+            case .options:
                 optionsGrid
             case .reorder:
                 reorderView
-            case .fixMistake:
-                textEntry(actionTitleKey: "action.fix")
-                    .onAppear {
-                        textAnswer = cleanedFixPrompt
-                    }
             }
         }
         .disabled(isBusy)
@@ -59,7 +58,7 @@ struct CardInteractionView: View {
 
     private func textEntry(actionTitleKey: String) -> some View {
         VStack(spacing: 12) {
-            TextField(L10n.string("answer.placeholder"), text: $textAnswer, axis: .vertical)
+            TextField(AppLocalization.string("answer.placeholder"), text: $textAnswer, axis: .vertical)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .lineLimit(1...4)
@@ -73,7 +72,7 @@ struct CardInteractionView: View {
             Button {
                 onSubmit(textAnswer)
             } label: {
-                Text(verbatim: L10n.string(actionTitleKey))
+                Text(verbatim: AppLocalization.string(actionTitleKey))
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(textAnswer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -83,7 +82,7 @@ struct CardInteractionView: View {
 
     private var reorderView: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(verbatim: selectedWords.isEmpty ? L10n.string("reorder.placeholder") : selectedWords.joined(separator: " "))
+            Text(verbatim: selectedWords.isEmpty ? AppLocalization.string("reorder.placeholder") : selectedWords.joined(separator: " "))
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(selectedWords.isEmpty ? AppTheme.muted : AppTheme.ink)
                 .padding(.horizontal, 18)
@@ -115,7 +114,7 @@ struct CardInteractionView: View {
                 Button {
                     selectedWords = []
                 } label: {
-                    Text(verbatim: L10n.string("action.reset"))
+                    Text(verbatim: AppLocalization.string("action.reset"))
                 }
                 .buttonStyle(SecondaryButtonStyle())
                 .disabled(selectedWords.isEmpty)
@@ -123,7 +122,7 @@ struct CardInteractionView: View {
                 Button {
                     onSubmit(selectedWords.joined(separator: " "))
                 } label: {
-                    Text(verbatim: L10n.string("action.check"))
+                    Text(verbatim: AppLocalization.string("action.check"))
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(selectedWords.count != card.options.count)

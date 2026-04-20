@@ -14,10 +14,10 @@ enum NetworkError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL: String(localized: "error.invalidURL")
-        case .invalidResponse: String(localized: "error.invalidResponse")
-        case .statusCode(let code): String(format: String(localized: "error.statusCode"), code)
-        case .decodingFailed: String(localized: "error.decoding")
+        case .invalidURL: AppLocalization.string("error.invalidURL")
+        case .invalidResponse: AppLocalization.string("error.invalidResponse")
+        case .statusCode(let code): AppLocalization.formatted("error.statusCode", code)
+        case .decodingFailed: AppLocalization.string("error.decoding")
         }
     }
 }

@@ -3,7 +3,8 @@ import SwiftUI
 struct ProfileView: View {
     let profile: UserProfile
     @Binding var nativeLanguageCode: String
-    let targetLanguageCode: String
+    @Binding var targetLanguageCode: String
+    @Binding var learningGoalCodes: String
     @Binding var notificationsEnabled: Bool
     let onChangeLanguage: () -> Void
 
@@ -14,7 +15,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("СЕРИЯ · STREAK")
+                        Text(verbatim: AppLocalization.string("feed.streak").uppercased())
                             .font(AppTheme.eyebrowFont)
                             .foregroundStyle(AppTheme.accent)
                         HStack(alignment: .lastTextBaseline, spacing: 8) {
@@ -22,7 +23,7 @@ struct ProfileView: View {
                                 .font(.system(size: 64, weight: .medium))
                                 .monospacedDigit()
                                 .foregroundStyle(AppTheme.ink)
-                            Text(verbatim: L10n.string("profile.daysInRow"))
+                            Text(verbatim: AppLocalization.string("profile.daysInRow"))
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(AppTheme.muted)
                         }
@@ -31,19 +32,19 @@ struct ProfileView: View {
                     StreakBars(activeDays: max(profile.streak, 1))
 
                     HStack(spacing: 10) {
-                        MetricTile(titleKey: "profile.cards", value: "\(profile.totalLearned)", caption: "+32 \(L10n.string("profile.today"))")
-                        MetricTile(titleKey: "profile.words", value: "\(profile.totalLearned / 2)", caption: "+6 \(L10n.string("profile.new"))")
+                        MetricTile(titleKey: "profile.cards", value: "\(profile.totalLearned)", caption: "+32 \(AppLocalization.string("profile.today"))")
+                        MetricTile(titleKey: "profile.words", value: "\(profile.totalLearned / 2)", caption: "+6 \(AppLocalization.string("profile.new"))")
                     }
 
                     HStack(spacing: 10) {
                         MetricTile(titleKey: "profile.grammar", value: "38", caption: "Subjuntivo +1")
-                        MetricTile(titleKey: "profile.time", value: "14", caption: "≈8 \(L10n.string("profile.minDay"))")
+                        MetricTile(titleKey: "profile.time", value: "14", caption: "≈8 \(AppLocalization.string("profile.minDay"))")
                     }
 
                     AccuracyCard()
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(verbatim: L10n.string("profile.weakTopics").uppercased())
+                        Text(verbatim: AppLocalization.string("profile.weakTopics").uppercased())
                             .font(AppTheme.eyebrowFont)
                             .foregroundStyle(AppTheme.muted)
                         ForEach(profile.weakTopics, id: \.self) { topic in
@@ -66,36 +67,34 @@ struct ProfileView: View {
                         dismiss()
                         onChangeLanguage()
                     } label: {
-                        Text(verbatim: L10n.string("profile.changeLanguage"))
+                        Text(verbatim: AppLocalization.string("profile.changeLanguage"))
                     }
                     .buttonStyle(PrimaryButtonStyle())
                 }
                 .padding(20)
             }
             .background(AppTheme.background)
-            .navigationTitle(L10n.string("profile.title"))
+            .navigationTitle(AppLocalization.string("profile.title"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink {
                         SettingsView(
                             nativeLanguageCode: $nativeLanguageCode,
-                            targetLanguageCode: targetLanguageCode,
+                            targetLanguageCode: $targetLanguageCode,
+                            learningGoalCodes: $learningGoalCodes,
                             notificationsEnabled: $notificationsEnabled
-                        ) {
-                            dismiss()
-                            onChangeLanguage()
-                        }
+                        )
                     } label: {
                         Image(systemName: "gearshape")
                     }
-                    .accessibilityLabel(L10n.string("settings.title"))
+                    .accessibilityLabel(AppLocalization.string("settings.title"))
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         dismiss()
                     } label: {
-                        Text(verbatim: L10n.string("action.done"))
+                        Text(verbatim: AppLocalization.string("action.done"))
                     }
                 }
             }
@@ -105,22 +104,28 @@ struct ProfileView: View {
 
 private struct SettingsView: View {
     @Binding var nativeLanguageCode: String
-    let targetLanguageCode: String
+    @Binding var targetLanguageCode: String
+    @Binding var learningGoalCodes: String
     @Binding var notificationsEnabled: Bool
-    let onChangeLearningLanguage: () -> Void
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 SettingsLanguagePicker(
                     titleKey: "settings.nativeLanguage",
-                    selectedCode: $nativeLanguageCode
+                    selectedCode: $nativeLanguageCode,
+                    choices: LanguageOption.nativeChoices,
+                    iconName: "person.text.rectangle"
                 )
 
-                SettingsLearningLanguageRow(
-                    targetLanguageCode: targetLanguageCode,
-                    onChange: onChangeLearningLanguage
+                SettingsLanguagePicker(
+                    titleKey: "settings.learningLanguage",
+                    selectedCode: $targetLanguageCode,
+                    choices: LanguageOption.learningChoices,
+                    iconName: "character.book.closed"
                 )
+
+                SettingsGoalsPicker(goalCodes: $learningGoalCodes)
 
                 SettingsToggleRow(
                     isOn: $notificationsEnabled,
@@ -131,20 +136,82 @@ private struct SettingsView: View {
             .padding(20)
         }
         .background(AppTheme.background)
-        .navigationTitle(L10n.string("settings.title"))
+        .navigationTitle(AppLocalization.string("settings.title"))
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct SettingsGoalsPicker: View {
+    @Binding var goalCodes: String
+
+    private var selectedGoals: [LearningGoal] {
+        LearningGoal.goals(from: goalCodes.split(separator: ",").map(String.init))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 14) {
+                SettingsIcon(systemName: "target")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: AppLocalization.string("settings.learningGoals"))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppTheme.ink)
+                    Text(verbatim: selectedGoals.map { AppLocalization.string($0.titleKey) }.joined(separator: ", "))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(AppTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                ForEach(LearningGoal.allCases, id: \.self) { goal in
+                    Button {
+                        toggle(goal)
+                    } label: {
+                        Text(verbatim: AppLocalization.string(goal.titleKey))
+                            .font(.system(size: 13, weight: .semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .foregroundStyle(selectedGoals.contains(goal) ? AppTheme.actionText : AppTheme.ink)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+                            .background(
+                                selectedGoals.contains(goal) ? AppTheme.action : AppTheme.background,
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(16)
+        .appSurface(radius: 22, shadow: true)
+    }
+
+    private func toggle(_ goal: LearningGoal) {
+        var goals = selectedGoals
+        if goals.contains(goal) {
+            guard goals.count > 1 else { return }
+            goals.removeAll { $0 == goal }
+        } else {
+            goals.append(goal)
+        }
+        goalCodes = LearningGoal.rawValues(from: goals).joined(separator: ",")
     }
 }
 
 private struct SettingsLanguagePicker: View {
     let titleKey: String
     @Binding var selectedCode: String
+    let choices: [LanguageOption]
+    let iconName: String
 
     var body: some View {
         HStack(spacing: 14) {
-            SettingsIcon(systemName: "person.text.rectangle")
+            SettingsIcon(systemName: iconName)
             VStack(alignment: .leading, spacing: 4) {
-                Text(verbatim: L10n.string(titleKey))
+                Text(verbatim: AppLocalization.string(titleKey))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(AppTheme.ink)
                 Text(verbatim: languageDisplayName(LanguageOption.option(for: selectedCode)))
@@ -152,42 +219,14 @@ private struct SettingsLanguagePicker: View {
                     .foregroundStyle(AppTheme.muted)
             }
             Spacer()
-            Picker(L10n.string(titleKey), selection: $selectedCode) {
-                ForEach(LanguageOption.all) { language in
+            Picker(AppLocalization.string(titleKey), selection: $selectedCode) {
+                ForEach(choices) { language in
                     Text(verbatim: languageDisplayName(language))
                         .tag(language.code)
                 }
             }
             .pickerStyle(.menu)
             .tint(AppTheme.ink)
-        }
-        .padding(16)
-        .appSurface(radius: 22, shadow: true)
-    }
-}
-
-private struct SettingsLearningLanguageRow: View {
-    let targetLanguageCode: String
-    let onChange: () -> Void
-
-    var body: some View {
-        HStack(spacing: 14) {
-            SettingsIcon(systemName: "character.book.closed")
-            VStack(alignment: .leading, spacing: 4) {
-                Text(verbatim: L10n.string("settings.learningLanguage"))
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(AppTheme.ink)
-                Text(verbatim: languageDisplayName(LanguageOption.option(for: targetLanguageCode)))
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(AppTheme.muted)
-            }
-            Spacer()
-            Button(action: onChange) {
-                Text(verbatim: L10n.string("settings.changeLearningLanguage"))
-                    .font(.system(size: 14, weight: .semibold))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(AppTheme.accent)
         }
         .padding(16)
         .appSurface(radius: 22, shadow: true)
@@ -203,10 +242,10 @@ private struct SettingsToggleRow: View {
         HStack(spacing: 14) {
             SettingsIcon(systemName: "bell.badge")
             VStack(alignment: .leading, spacing: 4) {
-                Text(verbatim: L10n.string(titleKey))
+                Text(verbatim: AppLocalization.string(titleKey))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(AppTheme.ink)
-                Text(verbatim: L10n.string(captionKey))
+                Text(verbatim: AppLocalization.string(captionKey))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(AppTheme.muted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -240,7 +279,7 @@ private struct MetricTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(verbatim: L10n.string(titleKey))
+            Text(verbatim: AppLocalization.string(titleKey))
                 .font(AppTheme.eyebrowFont)
                 .foregroundStyle(AppTheme.muted)
             HStack(alignment: .lastTextBaseline, spacing: 5) {
@@ -262,7 +301,7 @@ private struct MetricTile: View {
 }
 
 private func languageDisplayName(_ language: LanguageOption) -> String {
-    L10n.string(language.titleKey)
+    AppLocalization.string(language.titleKey)
 }
 
 private struct StreakBars: View {
@@ -308,7 +347,7 @@ private struct AccuracyCard: View {
                 Text("%")
                     .font(.title3.weight(.medium))
                     .foregroundStyle(AppTheme.ink)
-                Text(verbatim: L10n.string("profile.today"))
+                Text(verbatim: AppLocalization.string("profile.today"))
                     .font(.caption)
                     .foregroundStyle(AppTheme.muted)
                     .padding(.leading, 6)

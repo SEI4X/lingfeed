@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(userID) {
+      return signedIn() && request.auth.uid == userID;
+    }
+
+    match /cards/{cardID} {
+      allow read: if signedIn();
+      allow create, update: if false;
+      allow delete: if false;
+    }
+
+    match /learning_items/{itemID} {
+      allow read: if signedIn();
+      allow create, update: if false;
+      allow delete: if false;
+    }
+
+    match /users/{userID}/learning/{documentID} {
+      allow read: if owns(userID);
+      allow write: if false;
+    }
+
+    match /users/{userID}/learning_item_states/{itemID} {
+      allow read: if owns(userID);
+      allow write: if false;
+    }
+
+    match /users/{userID}/skill_states/{skillTag} {
+      allow read: if owns(userID);
+      allow write: if false;
+    }
+
+    match /users/{userID}/card_states/{cardID} {
+      allow read: if owns(userID);
+      allow write: if false;
+    }
+
+    match /users/{userID}/card_events/{eventID} {
+      allow read: if owns(userID);
+      allow write: if false;
+    }
+
+    match /users/{userID}/events/{eventID} {
+      allow read: if owns(userID);
+      allow write: if false;
+    }
+
+    match /users/{userID}/session_stats/{sessionID} {
+      allow read: if owns(userID);
+      allow write: if false;
+    }
+
+    match /users/{userID}/{document=**} {
+      allow read: if owns(userID);
+      allow write: if false;
+    }
+  }
+}

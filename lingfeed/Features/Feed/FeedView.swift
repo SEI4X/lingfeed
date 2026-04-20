@@ -7,21 +7,24 @@ struct FeedView: View {
     @State private var keyboardHeight: CGFloat = 0
     @State private var pageCommitTask: Task<Void, Never>?
 
-    let targetLanguageCode: String
+    @Binding var targetLanguageCode: String
     @Binding var nativeLanguageCode: String
+    @Binding var learningGoalCodes: String
     @Binding var notificationsEnabled: Bool
     let onChangeLanguage: () -> Void
 
     init(
         viewModel: FeedViewModel,
-        targetLanguageCode: String,
+        targetLanguageCode: Binding<String>,
         nativeLanguageCode: Binding<String>,
+        learningGoalCodes: Binding<String>,
         notificationsEnabled: Binding<Bool>,
         onChangeLanguage: @escaping () -> Void
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
-        self.targetLanguageCode = targetLanguageCode
+        _targetLanguageCode = targetLanguageCode
         _nativeLanguageCode = nativeLanguageCode
+        _learningGoalCodes = learningGoalCodes
         _notificationsEnabled = notificationsEnabled
         self.onChangeLanguage = onChangeLanguage
     }
@@ -50,7 +53,8 @@ struct FeedView: View {
             ProfileView(
                 profile: viewModel.profile,
                 nativeLanguageCode: $nativeLanguageCode,
-                targetLanguageCode: targetLanguageCode,
+                targetLanguageCode: $targetLanguageCode,
+                learningGoalCodes: $learningGoalCodes,
                 notificationsEnabled: $notificationsEnabled,
                 onChangeLanguage: onChangeLanguage
             )
@@ -96,7 +100,7 @@ struct FeedView: View {
                                 },
                                 onTooEasy: {
                                     viewModel.activateCard(card.id)
-                                    viewModel.markCurrentCardTooEasy()
+                                    Task { await viewModel.markCurrentCardTooEasy() }
                                 }
                             )
                             .id(card.id)
@@ -324,7 +328,7 @@ private struct FeedTopBar: View {
                     .foregroundStyle(AppTheme.ink)
                     .frame(width: 28, height: 28)
             }
-            .accessibilityLabel(L10n.string("profile.title"))
+            .accessibilityLabel(AppLocalization.string("profile.title"))
         }
         .overlay(alignment: .bottom) {
             ProgressRuler(segments: 5, completed: min(stats.answered % 5, 5))
@@ -335,9 +339,9 @@ private struct FeedTopBar: View {
     private var statStrip: some View {
         ViewThatFits(in: .horizontal) {
             statsText(
-                streak: "\(max(profile.streak, 1))d \(L10n.string("feed.streak"))",
-                done: String(format: L10n.string("feed.done"), stats.answered),
-                accuracy: "\(accuracyPercent)% \(L10n.string("feed.accuracy"))"
+                streak: "\(max(profile.streak, 1))d \(AppLocalization.string("feed.streak"))",
+                done: AppLocalization.formatted("feed.done", stats.answered),
+                accuracy: "\(accuracyPercent)% \(AppLocalization.string("feed.accuracy"))"
             )
 
             statsText(
@@ -394,7 +398,7 @@ private struct LoadingView: View {
         VStack(spacing: 14) {
             ProgressView()
                 .tint(AppTheme.ink)
-            Text(L10n.string("feed.loading"))
+            Text(verbatim: AppLocalization.string("feed.loading"))
                 .font(AppTheme.bodyMonoFont)
                 .foregroundStyle(AppTheme.muted)
         }
@@ -411,14 +415,14 @@ private struct ErrorStateView: View {
             Image(systemName: "wifi.exclamationmark")
                 .font(.largeTitle)
                 .foregroundStyle(AppTheme.ink)
-            Text(L10n.string("error.title"))
+            Text(verbatim: AppLocalization.string("error.title"))
                 .font(.title2.weight(.bold))
                 .foregroundStyle(AppTheme.ink)
             Text(message)
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(AppTheme.muted)
-            Button(L10n.string("action.retry"), action: retry)
+            Button(AppLocalization.string("action.retry"), action: retry)
                 .buttonStyle(PrimaryButtonStyle())
         }
         .padding(24)

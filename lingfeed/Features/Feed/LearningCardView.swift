@@ -42,7 +42,7 @@ struct LearningCardView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 5) {
-                Text(verbatim: L10n.string(card.type.titleKey))
+                Text(verbatim: AppLocalization.string(card.type.titleKey))
                     .font(AppTheme.eyebrowFont)
                     .textCase(.uppercase)
                     .foregroundStyle(AppTheme.muted)
@@ -62,7 +62,7 @@ struct LearningCardView: View {
             Menu {
                 Button(action: onTooEasy) {
                     Label {
-                        Text(verbatim: L10n.string("card.action.tooEasy"))
+                        Text(verbatim: AppLocalization.string("card.action.tooEasy"))
                     } icon: {
                         Image(systemName: "sparkles")
                     }
@@ -75,7 +75,7 @@ struct LearningCardView: View {
                     .background(AppTheme.recessed.opacity(0.9), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .disabled(isBusy)
-            .accessibilityLabel(L10n.string("card.action.tooEasy"))
+            .accessibilityLabel(AppLocalization.string("card.action.tooEasy"))
         }
     }
 
@@ -139,6 +139,7 @@ private struct PromptContentView: View {
                     .lineLimit(5)
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(AppTheme.ink)
+                    .accessibilityIdentifier("card-prompt")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -151,17 +152,17 @@ private struct PromptContentView: View {
 
         switch card.type {
         case .translate:
-            return L10n.string("card.instruction.translate")
+            return AppLocalization.string("card.instruction.translate")
         case .multipleChoice:
-            return L10n.string("card.instruction.multipleChoice")
+            return AppLocalization.string("card.instruction.multipleChoice")
         case .fillGap:
-            return L10n.string("card.instruction.fillGap")
+            return AppLocalization.string("card.instruction.fillGap")
         case .reorder:
-            return L10n.string("card.instruction.reorder")
+            return AppLocalization.string("card.instruction.reorder")
         case .fixMistake:
-            return L10n.string("card.instruction.fixMistake")
+            return AppLocalization.string("card.instruction.fixMistake")
         case .chat:
-            return L10n.string("card.instruction.chat")
+            return AppLocalization.string("card.instruction.chat")
         }
     }
 
@@ -196,6 +197,7 @@ private struct FillGapPrompt: View {
         .foregroundStyle(AppTheme.ink)
         .minimumScaleFactor(0.68)
         .lineLimit(4)
+        .accessibilityIdentifier("card-prompt")
     }
 }
 
@@ -208,7 +210,7 @@ private struct FeedbackPanel: View {
             switch feedback {
             case .success:
                 Label {
-                    Text(verbatim: L10n.string("feedback.success"))
+                    Text(verbatim: AppLocalization.string("feedback.success"))
                 } icon: {
                     Image(systemName: "checkmark.circle.fill")
                 }
@@ -216,21 +218,22 @@ private struct FeedbackPanel: View {
                 .foregroundStyle(AppTheme.success)
             case .error(let userAnswer, let correctAnswer, let explanation):
                 Label {
-                    Text(verbatim: L10n.string("feedback.tryAgain"))
+                    Text(verbatim: AppLocalization.string("feedback.tryAgain"))
                 } icon: {
                     Image(systemName: "xmark.circle.fill")
                 }
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(AppTheme.danger)
                 answerCompareRow(titleKey: "feedback.yourAnswer", value: userAnswer, color: AppTheme.danger)
-                Text(verbatim: "\(L10n.string("feedback.correctAnswer")) \(correctAnswer)")
+                Text(verbatim: "\(AppLocalization.string("feedback.correctAnswer")) \(correctAnswer)")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(AppTheme.ink)
+                    .accessibilityIdentifier("feedback-correct-answer")
                 Text(verbatim: explanation)
                     .font(.body)
                     .foregroundStyle(AppTheme.muted)
                 Button(action: onContinue) {
-                    Text(verbatim: L10n.string("action.continue"))
+                    Text(verbatim: AppLocalization.string("action.continue"))
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.top, 4)
@@ -239,13 +242,15 @@ private struct FeedbackPanel: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .appSurface(fill: AppTheme.recessed.opacity(0.72), border: AppTheme.hairline, radius: 18)
+        .accessibilityIdentifier("feedback-panel")
     }
 
     private func answerCompareRow(titleKey: String, value: String, color: Color) -> some View {
-        Text(verbatim: "\(L10n.string(titleKey)) \(value)")
+        Text(verbatim: "\(AppLocalization.string(titleKey)) \(value)")
             .font(.body.weight(.semibold))
             .foregroundStyle(color)
             .lineLimit(3)
             .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("feedback-your-answer")
     }
 }

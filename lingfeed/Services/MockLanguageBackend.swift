@@ -9,7 +9,11 @@ actor MockLanguageBackend {
         self.deck = deck
     }
 
-    func start(languageCode: String) async throws -> SessionStart {
+    func start(
+        languageCode: String,
+        nativeLanguageCode: String = LanguageOption.fallbackNativeCode,
+        learningGoals: [LearningGoal] = LearningGoal.defaultGoals
+    ) async throws -> SessionStart {
         try await Task.sleep(nanoseconds: 180_000_000)
         cursor = 5
         activeSessionID = "session-\(languageCode)-\(UUID().uuidString.prefix(8))"
@@ -32,6 +36,16 @@ actor MockLanguageBackend {
     }
 
     func skip(sessionID: String, cardID: String) async throws -> LearningCard? {
+        try await Task.sleep(nanoseconds: 90_000_000)
+        return nextCard()
+    }
+
+    func deferCard(sessionID: String, cardID: String) async throws -> LearningCard? {
+        try await Task.sleep(nanoseconds: 60_000_000)
+        return nextCard()
+    }
+
+    func markTooEasy(sessionID: String, cardID: String) async throws -> LearningCard? {
         try await Task.sleep(nanoseconds: 90_000_000)
         return nextCard()
     }
@@ -59,11 +73,16 @@ actor MockLanguageBackend {
             id: "\(baseCard.id)-gen-\(cursor)",
             type: baseCard.type,
             context: baseCard.context,
+            situation: baseCard.situation,
             prompt: baseCard.prompt,
             options: baseCard.options,
             correctAnswer: baseCard.correctAnswer,
             explanation: baseCard.explanation,
-            chatMessages: baseCard.chatMessages
+            chatMessages: baseCard.chatMessages,
+            targetItemIDs: baseCard.targetItemIDs,
+            skillTags: baseCard.skillTags,
+            difficulty: baseCard.difficulty,
+            missionID: baseCard.missionID
         )
         cursor += 1
         return card
@@ -73,7 +92,9 @@ actor MockLanguageBackend {
         value
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            .replacingOccurrences(of: "  ", with: " ")
+            .replacingOccurrences(of: #"[^\p{L}\p{N}]+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
     }
 
     static let defaultDeck: [LearningCard] = [

@@ -23,14 +23,33 @@ final class lingfeedUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testFeedShowsWrongAnswerFeedback() throws {
         let app = XCUIApplication()
+        app.launchArguments += [
+            "--use-mock-backend",
+            "--ui-test-feed-ready",
+            "-AppleLanguages",
+            "(en)",
+            "-AppleLocale",
+            "en_US"
+        ]
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        XCTAssertTrue(app.staticTexts["Good morning"].waitForExistence(timeout: 8))
+
+        let answerField = app.firstTextInput
+        XCTAssertTrue(answerField.waitForExistence(timeout: 2))
+        answerField.tap()
+        answerField.typeText("wrong")
+        app.dismissKeyboardIfNeeded()
+
+        let submitButton = app.buttons["Check"]
+        XCTAssertTrue(submitButton.waitForExistence(timeout: 2))
+        submitButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Almost."].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["Your answer: wrong"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Correct answer: Buenos dias"].waitForExistence(timeout: 2))
     }
 
     @MainActor
@@ -39,5 +58,24 @@ final class lingfeedUITests: XCTestCase {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             XCUIApplication().launch()
         }
+    }
+}
+
+private extension XCUIApplication {
+    func element(id: String) -> XCUIElement {
+        descendants(matching: .any)[id]
+    }
+
+    var firstTextInput: XCUIElement {
+        let textField = textFields.firstMatch
+        if textField.exists {
+            return textField
+        }
+        return textViews.firstMatch
+    }
+
+    func dismissKeyboardIfNeeded() {
+        guard keyboards.firstMatch.exists else { return }
+        coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18)).tap()
     }
 }

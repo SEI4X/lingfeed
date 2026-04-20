@@ -15,6 +15,59 @@ final class FeedViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.phase, .ready)
     }
 
+    func testStartFailsInsteadOfShowingBlankFeedWhenBackendReturnsNoCards() async {
+        let viewModel = FeedViewModel(
+            languageCode: "ru",
+            authService: TestAuthService(),
+            cardService: TestCardService(answerResult: CardAnswerResult(isCorrect: true, nextCard: nil), skipCard: nil, prefetchCards: []),
+            sessionService: TestSessionService(cards: []),
+            successAdvanceDelayNanoseconds: 0
+        )
+
+        await viewModel.start()
+
+        XCTAssertTrue(viewModel.cards.isEmpty)
+        if case .failed(let message) = viewModel.phase {
+            XCTAssertFalse(message.isEmpty)
+        } else {
+            XCTFail("Expected failed phase for empty backend feed")
+        }
+    }
+
+    func testStartRecordsFirstCardViewed() async {
+        let cardService = TestCardService(answerResult: CardAnswerResult(isCorrect: true, nextCard: nil), skipCard: nil, prefetchCards: [])
+        let viewModel = FeedViewModel(
+            languageCode: "es",
+            authService: TestAuthService(),
+            cardService: cardService,
+            sessionService: TestSessionService(cards: FeedHarness.initialCards),
+            successAdvanceDelayNanoseconds: 0
+        )
+
+        await viewModel.start()
+
+        XCTAssertEqual(cardService.viewedCardIDs, ["card-1"])
+        XCTAssertTrue(cardService.returnedCardIDs.isEmpty)
+    }
+
+    func testReturningToSeenCardRecordsReturnedWithoutDuplicateViewed() async {
+        let cardService = TestCardService(answerResult: CardAnswerResult(isCorrect: true, nextCard: nil), skipCard: nil, prefetchCards: [])
+        let viewModel = FeedViewModel(
+            languageCode: "es",
+            authService: TestAuthService(),
+            cardService: cardService,
+            sessionService: TestSessionService(cards: FeedHarness.initialCards),
+            successAdvanceDelayNanoseconds: 0
+        )
+
+        await viewModel.start()
+        await viewModel.pageToCard("card-2")
+        await viewModel.pageToCard("card-1")
+
+        XCTAssertEqual(cardService.viewedCardIDs, ["card-1", "card-2"])
+        XCTAssertEqual(cardService.returnedCardIDs, ["card-1"])
+    }
+
     func testCorrectAnswerAdvancesAndAppendsNextCard() async {
         let harness = FeedHarness(
             answerResult: CardAnswerResult(isCorrect: true, nextCard: FeedHarness.card(id: "card-6"))
@@ -105,7 +158,7 @@ final class FeedViewModelTests: XCTestCase {
         let viewModel = harness.makeViewModel()
 
         await viewModel.start()
-        viewModel.markCurrentCardTooEasy()
+        await viewModel.markCurrentCardTooEasy()
 
         XCTAssertTrue(viewModel.isMarkedTooEasy("card-1"))
         XCTAssertEqual(viewModel.stats.answered, 0)
@@ -126,6 +179,27 @@ final class FeedViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.stats.skipped, 1)
         XCTAssertEqual(viewModel.currentCard?.id, "card-2")
         XCTAssertTrue(viewModel.cards.contains { $0.id == "card-6" })
+    }
+
+    func testPagingForwardDefersWithoutManualSkip() async {
+        let cardService = TestCardService(
+            answerResult: CardAnswerResult(isCorrect: true, nextCard: nil),
+            skipCard: FeedHarness.card(id: "card-6"),
+            prefetchCards: []
+        )
+        let viewModel = FeedViewModel(
+            languageCode: "es",
+            authService: TestAuthService(),
+            cardService: cardService,
+            sessionService: TestSessionService(cards: FeedHarness.initialCards),
+            successAdvanceDelayNanoseconds: 0
+        )
+
+        await viewModel.start()
+        await viewModel.pageToCard("card-2")
+
+        XCTAssertEqual(cardService.deferredCardIDs, ["card-1"])
+        XCTAssertTrue(cardService.skippedCardIDs.isEmpty)
     }
 
     func testPreviewingCardDoesNotCountSkipUntilPageCommit() async {
@@ -172,6 +246,30 @@ final class FeedViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.stats.answered, 1)
         XCTAssertEqual(viewModel.stats.correct, 1)
         XCTAssertEqual(viewModel.stats.skipped, 0)
+    }
+
+    func testSubmitSendsResponseDurationFromCardActivation() async {
+        let base = Date(timeIntervalSince1970: 1_000)
+        var nowCalls = [
+            base,
+            base.addingTimeInterval(12),
+            base.addingTimeInterval(12)
+        ]
+        let cardService = TestCardService(answerResult: CardAnswerResult(isCorrect: true, nextCard: nil), skipCard: nil, prefetchCards: [])
+        let viewModel = FeedViewModel(
+            languageCode: "es",
+            authService: TestAuthService(),
+            cardService: cardService,
+            sessionService: TestSessionService(cards: FeedHarness.initialCards),
+            successAdvanceDelayNanoseconds: 0,
+            now: { nowCalls.removeFirst() }
+        )
+
+        await viewModel.start()
+        await viewModel.submit("answer")
+
+        XCTAssertEqual(cardService.answers.first?.responseDuration, 12)
+        XCTAssertEqual(cardService.answers.first?.answeredAt, base.addingTimeInterval(12))
     }
 
     func testPagingNearEndPrefetchesMoreCards() async {
@@ -226,6 +324,11 @@ private struct TestAuthService: AuthService {
 private final class TestCardService: CardService {
     let answerResult: CardAnswerResult
     let skipCard: LearningCard?
+    private(set) var answers: [CardAnswer] = []
+    private(set) var skippedCardIDs: [String] = []
+    private(set) var deferredCardIDs: [String] = []
+    private(set) var viewedCardIDs: [String] = []
+    private(set) var returnedCardIDs: [String] = []
     private var prefetchCards: [LearningCard]
 
     init(answerResult: CardAnswerResult, skipCard: LearningCard?, prefetchCards: [LearningCard]) {
@@ -235,10 +338,21 @@ private final class TestCardService: CardService {
     }
 
     func answer(sessionID: String, answer: CardAnswer) async throws -> CardAnswerResult {
-        answerResult
+        answers.append(answer)
+        return answerResult
     }
 
     func skip(sessionID: String, cardID: String) async throws -> LearningCard? {
+        skippedCardIDs.append(cardID)
+        return skipCard
+    }
+
+    func deferCard(sessionID: String, cardID: String) async throws -> LearningCard? {
+        deferredCardIDs.append(cardID)
+        return skipCard
+    }
+
+    func markTooEasy(sessionID: String, cardID: String) async throws -> LearningCard? {
         skipCard
     }
 
@@ -246,12 +360,20 @@ private final class TestCardService: CardService {
         guard !prefetchCards.isEmpty else { return nil }
         return prefetchCards.removeFirst()
     }
+
+    func recordViewed(sessionID: String, cardID: String) async throws {
+        viewedCardIDs.append(cardID)
+    }
+
+    func recordReturned(sessionID: String, cardID: String) async throws {
+        returnedCardIDs.append(cardID)
+    }
 }
 
 private struct TestSessionService: SessionService {
     let cards: [LearningCard]
 
-    func start(languageCode: String) async throws -> SessionStart {
+    func start(languageCode: String, nativeLanguageCode: String, learningGoals: [LearningGoal]) async throws -> SessionStart {
         SessionStart(
             sessionID: "test-session",
             cards: cards,

@@ -9,13 +9,13 @@ struct SessionSummaryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(verbatim: "02 · \(L10n.string("summary.eyebrow"))")
+                Text(verbatim: "02 · \(AppLocalization.string("summary.eyebrow"))")
                     .font(AppTheme.eyebrowFont)
                     .foregroundStyle(AppTheme.accent)
-                Text(verbatim: L10n.string("summary.title"))
+                Text(verbatim: AppLocalization.string("summary.title"))
                     .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(AppTheme.ink)
-                Text(verbatim: L10n.string("summary.subtitle"))
+                Text(verbatim: AppLocalization.string("summary.subtitle"))
                     .font(.body)
                     .foregroundStyle(AppTheme.muted)
             }
@@ -28,7 +28,7 @@ struct SessionSummaryView: View {
 
             ProgressView(value: summary.stats.accuracy)
                 .tint(AppTheme.accent)
-            Text(verbatim: String(format: L10n.string("summary.accuracy"), Int(summary.stats.accuracy * 100)))
+            Text(verbatim: AppLocalization.formatted("summary.accuracy", Int(summary.stats.accuracy * 100)))
                 .font(AppTheme.bodyMonoFont)
                 .foregroundStyle(AppTheme.muted)
 
@@ -36,7 +36,7 @@ struct SessionSummaryView: View {
                 dismiss()
                 onContinue()
             } label: {
-                Text(verbatim: L10n.string("summary.continue"))
+                Text(verbatim: AppLocalization.string("summary.continue"))
             }
             .buttonStyle(PrimaryButtonStyle())
         }
@@ -54,7 +54,7 @@ private struct SummaryMetric: View {
                 .font(.system(size: 34, weight: .medium))
                 .monospacedDigit()
                 .foregroundStyle(AppTheme.ink)
-            Text(verbatim: L10n.string(titleKey))
+            Text(verbatim: AppLocalization.string(titleKey))
                 .font(AppTheme.eyebrowFont)
                 .foregroundStyle(AppTheme.muted)
                 .lineLimit(1)

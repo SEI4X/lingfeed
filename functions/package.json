@@ -1,0 +1,23 @@
+{
+  "name": "lingfeed-functions",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "cleanup:bad-cards": "npm run build && node lib/cleanupBadCards.js",
+    "seed": "npm run build && node lib/seed.js",
+    "test": "npm run build && node --test lib/**/*.test.js",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
